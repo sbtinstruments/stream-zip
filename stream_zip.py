@@ -1,4 +1,5 @@
 from collections import deque
+from datetime import datetime
 from struct import Struct
 import asyncio
 import secrets
@@ -73,6 +74,7 @@ def ZIP_AUTO(uncompressed_size, level=9):
 def stream_zip(files, chunk_size=65536,
                get_compressobj=lambda: zlib.compressobj(wbits=-zlib.MAX_WBITS, level=9),
                extended_timestamps=True,
+               strict_timestamps=True,
                password=None,
                get_crypto_random=lambda num_bytes: secrets.token_bytes(num_bytes),
 ):
@@ -611,6 +613,12 @@ def stream_zip(files, chunk_size=65536,
 
             name_encoded = name.encode('utf-8')
             _raise_if_beyond(len(name_encoded), maximum=0xffff, exception_class=NameLengthOverflowError)
+
+            if not strict_timestamps:
+                if modified_at.year < 1980:
+                    modified_at = datetime(1980, 1, 1, 0, 0, 0)
+                elif modified_at.year > 2107:
+                    modified_at = datetime(2107, 12, 31, 23, 59, 59)
 
             mod_at_ms_dos = modified_at_struct.pack(
                 int(modified_at.second / 2) | \
